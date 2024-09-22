@@ -45,11 +45,15 @@ impl QuestionsDao for QuestionsDaoImpl {
     }
 
     async fn delete_question(&self, question_uuid: String) -> Result<(), DBError> {
-        let uuid = sqlx::types::Uuid::parse_str(&question_uuid).map_err(|_| {
+        /*let uuid = sqlx::types::Uuid::parse_str(&question_uuid).map_err(|_| {
+            DBError::InvalidUUID(format!("Could not parse question UUID: {}", question_uuid))
+        })?;*/
+
+        let uuid: i64 = question_uuid.parse().map_err(|_| {
             DBError::InvalidUUID(format!("Could not parse question UUID: {}", question_uuid))
         })?;
 
-        sqlx::query!("DELETE FROM questions WHERE question_uuid = $1", uuid)
+        sqlx::query!("DELETE FROM questions WHERE question_uuid = ?", uuid)
             .execute(&self.db)
             .await
             .map_err(|e| DBError::Other(Box::new(e)))?;

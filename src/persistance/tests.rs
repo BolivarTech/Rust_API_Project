@@ -40,21 +40,21 @@ mod answers_tests {
     #[sqlx::test]
     async fn create_answer_should_fail_with_non_existent_uuid(pool: SqlitePool) -> Result<(), String> {
         let answer_doa = AnswersDaoImpl::new(pool);
-
+        
         let result = answer_doa
             .create_answer(Answer {
-                question_uuid: "a22abcd2-22ab-2222-a22b-2abc2a2b22cc".to_owned(),
+                question_uuid: "123456789".to_owned(),
                 content: "test content".to_owned(),
             })
             .await;
-
+        
         if result.is_ok() {
             return Err(format!(
                 "Expected an error but got the following result: {:?}",
                 result.unwrap()
             ));
         }
-
+        
         if let Err(DBError::InvalidUUID(_)) = result {
             Ok(())
         } else {
@@ -75,7 +75,7 @@ mod answers_tests {
 
         let result = answer_doa
             .create_answer(Answer {
-                question_uuid: "a22abcd2-22ab-2222-a22b-2abc2a2b22cc".to_owned(),
+                question_uuid: "123456789".to_owned(),
                 content: "test content".to_owned(),
             })
             .await;
@@ -157,7 +157,7 @@ mod answers_tests {
         pool.close().await;
 
         let result = answer_doa
-            .delete_answer("a22abcd2-22ab-2222-a22b-2abc2a2b22cc".to_owned())
+            .delete_answer("123456789".to_owned())
             .await;
 
         if result.is_ok() {
@@ -245,7 +245,7 @@ mod answers_tests {
         pool.close().await;
 
         let result = answer_doa
-            .get_answers("a22abcd2-22ab-2222-a22b-2abc2a2b22cc".to_owned())
+            .get_answers("123456789".to_owned())
             .await;
 
         if result.is_ok() {
@@ -396,7 +396,7 @@ mod questions_tests {
         pool.close().await;
 
         let result = doa
-            .delete_question("a22abcd2-22ab-2222-a22b-2abc2a2b22cc".to_owned())
+            .delete_question("123456789".to_owned())
             .await;
 
         if result.is_ok() {

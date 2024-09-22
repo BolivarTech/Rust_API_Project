@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use sqlx::query;
 use sqlx::sqlite::SqlitePool;
 
-use crate::models::{postgres_error_codes, Answer, AnswerDetail, DBError};
+use crate::models::{sqlite_error_codes, Answer, AnswerDetail, DBError};
 
 #[async_trait]
 pub trait AnswersDao {
@@ -24,17 +24,21 @@ impl AnswersDaoImpl {
 #[async_trait]
 impl AnswersDao for AnswersDaoImpl {
     async fn create_answer(&self, answer: Answer) -> Result<AnswerDetail, DBError> {
-        let uuid = sqlx::types::Uuid::parse_str(&answer.question_uuid).map_err(|_| {
+        /* let uuid = sqlx::types::Uuid::parse_str(&answer.question_uuid).map_err(|_| {
             DBError::InvalidUUID(format!(
                 "Could not parse answer UUID: {}",
                 answer.question_uuid
             ))
-        })?;
+        })?; */
 
+        let uuid: i64 = answer.question_uuid.parse().map_err(|_| {
+            DBError::InvalidUUID(format!("Could not parse answer UUID: {}", answer.question_uuid))
+        })?;
+        
         let record = query!(
             r#"
                 INSERT INTO answers ( question_uuid, content )
-                VALUES ( $1, $2 )
+                VALUES ( ?, ? )
                 RETURNING *
             "#,
             uuid,
@@ -45,7 +49,7 @@ impl AnswersDao for AnswersDaoImpl {
             .map_err(|e: sqlx::Error| match e {
                 sqlx::Error::Database(e) => {
                     if let Some(code) = e.code() {
-                        if code.eq(postgres_error_codes::FOREIGN_KEY_VIOLATION) {
+                        if code.eq(sqlite_error_codes::FOREIGN_KEY_VIOLATION) {
                             return DBError::InvalidUUID(format!(
                                 "Invalid question UUID: {}",
                                 answer.question_uuid
@@ -66,11 +70,15 @@ impl AnswersDao for AnswersDaoImpl {
     }
 
     async fn delete_answer(&self, answer_uuid: String) -> Result<(), DBError> {
-        let uuid = sqlx::types::Uuid::parse_str(&answer_uuid).map_err(|_| {
-            DBError::InvalidUUID(format!("Could not parse answer UUID: {}", answer_uuid))
+        /*let uuid = sqlx::types::Uuid::parse_str(&answer_uuid).map_err(|_| {
+            DBError::InvalidUUID(format!("Could not parse question UUID: {}", answer_uuid))
+        })?;*/
+
+        let uuid: i64 = answer_uuid.parse().map_err(|_| {
+            DBError::InvalidUUID(format!("Could not parse question UUID: {}", answer_uuid))
         })?;
 
-        query!("DELETE FROM answers WHERE answer_uuid = $1", uuid)
+        query!("DELETE FROM answers WHERE answer_uuid = ?", uuid)
             .execute(&self.db)
             .await
             .map_err(|e| DBError::Other(Box::new(e)))?;
@@ -79,11 +87,11 @@ impl AnswersDao for AnswersDaoImpl {
     }
 
     async fn get_answers(&self, question_uuid: String) -> Result<Vec<AnswerDetail>, DBError> {
-        let uuid = sqlx::types::Uuid::parse_str(&question_uuid).map_err(|_| {
+         let uuid: i64 = question_uuid.parse().map_err(|_| {
             DBError::InvalidUUID(format!("Could not parse question UUID: {}", question_uuid))
         })?;
-
-        let records = query!("SELECT * FROM answers WHERE question_uuid = $1", uuid)
+        
+        let records = query!("SELECT * FROM answers WHERE question_uuid = ?", uuid)
             .fetch_all(&self.db)
             .await
             .map_err(|e| DBError::Other(Box::new(e)))?;
